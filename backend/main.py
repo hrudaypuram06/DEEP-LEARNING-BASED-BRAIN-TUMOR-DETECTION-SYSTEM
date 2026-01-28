@@ -7,7 +7,10 @@ import shutil
 import os
 from pydantic import BaseModel
 
-from backend.ai_engine import predict_tumor, chat_with_patient
+try:
+    from backend.ai_engine import predict_tumor, chat_with_patient
+except ImportError:
+    from ai_engine import predict_tumor, chat_with_patient
 
 class ChatRequest(BaseModel):
     message: str
@@ -17,7 +20,7 @@ app = FastAPI(title="Brain Tumor Detection API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for simplicity/debugging
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,13 +30,12 @@ app.add_middleware(
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-
 # Mount static files
-app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
 
 @app.get("/")
 def read_root():
-    return FileResponse("backend/static/index.html")
+    return FileResponse(os.path.join(os.path.dirname(__file__), "static/index.html"))
 
 @app.post("/predict")
 async def analyze_scan(file: UploadFile = File(...)):
@@ -60,4 +62,5 @@ async def chat_endpoint(request: ChatRequest):
 if __name__ == "__main__":
     import uvicorn
     print("\n\n📍 APP IS STARTING! OPEN THIS LINK IN YOUR BROWSER: http://localhost:8000\n\n")
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
+    # Run using the app object directly to avoid import string issues
+    uvicorn.run(app, host="0.0.0.0", port=8000)
